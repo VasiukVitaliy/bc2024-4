@@ -3,6 +3,7 @@ const {program} = require('commander');
 const url = require('url');
 const fs = require('fs').promises
 const path = require('path');
+const superagent = require("superagent");
 
 
 program
@@ -53,13 +54,17 @@ program.parse();
 //.then(console.log("Writing data succesfully"))
 //.catch((err)=>{console.log("Writing data unsuccesfully")});
 
-let promise2 = (path_2,g_data)=>{return new Promise((resolve,reject)=>{
-       fs.writeFile(path_2,g_data,(err)=>{
-            if(err) reject(err);
-            else resolve();
-        })
-    })
-}
+let promise2 = (path_2, g_data) => {
+    return new Promise((resolve, reject) => {
+      fs.writeFile(path_2+ q, g_data, 'binary', (err) => {
+        if (err) {
+          reject(err); // Якщо помилка, повертаємо її
+        } else {
+          resolve(); 
+        }
+      });
+    });
+  };
 
 
 let readFilePromise = (filePath) => {
@@ -69,9 +74,8 @@ let readFilePromise = (filePath) => {
 function base_server(req,res){
     let q = url.parse(req.url);
     q = q.pathname;
-    console.log(path_to_cache + q +".jpg");
     full_path = path_to_cache + q +".jpg";
-    console.log(full_path);
+
    switch(req.method){
     case "GET":{
         
@@ -90,20 +94,38 @@ function base_server(req,res){
         break;
     }
     case "PUT":{
-        res.writeHead(201,{'Content-Type': 'image/jpeg'});
-        promise2(full_path,g_data)
-            .then(console.log("Writing data succesfully"))
-            .catch((err)=>{console.log("Writing data unsuccesfully")})
-            .finally(() => {
-                console.log("Operation completed");
-                res.end();
-            }) ;
+        
+        superagent
+            .get('https://http.cat/404')
+            .buffer(true)
+            .then((response)=>{
+                promise2(path_to_cache,response.body)
+                    .then(()=>{
+                        res.writeHead(201,{'Content-Type': 'image/jpeg'});
+                        
+                    })
+                    .catch((err)=>{
+                        res.writeHead(404,{'Content-Type': 'text/html'});
+                        res.write("404 file not write")
+                    })
+                    .finally(() => {
+                        console.log("Operation completed");
+                        res.end();
+                    });
+            }
+            )
+        
             break;
     }
     case "DELETE":{
+        try{
          fs.unlink(full_path); 
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
                 res.end("Image deleted");
+        }catch(err){
+            res.writeHead(404,{'Content-Type': 'text/html'});
+            res.write("404 not found")
+        }
         break;
     }
     default:{
