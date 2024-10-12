@@ -12,8 +12,6 @@ program
 
 program.parse();
 
-
-
     let opt = program.opts();
     if (!opt.host || !opt.port || !opt.cache){throw new Error('no request param');}
     var host = opt.host;
@@ -55,34 +53,66 @@ program.parse();
 //.then(console.log("Writing data succesfully"))
 //.catch((err)=>{console.log("Writing data unsuccesfully")});
 
-
-async function read(fpath) {
-    try {
-        const resolvedPath = path.resolve(fpath);
-        const data = await fs.readFile(resolvedPath, { encoding: 'utf-8' }); 
- 
-        return data;
-    } catch (err) {
-        console.error("File not found:", err.message); 
-    }
+let promise2 = (path_2,g_data)=>{return new Promise((resolve,reject)=>{
+       fs.writeFile(path_2,g_data,(err)=>{
+            if(err) reject(err);
+            else resolve();
+        })
+    })
 }
 
 
-read("C:/Users/QSUS/Desktop/js/bc2024-4/input.txt").then((data)=>{console.log(data)});
-
-
-
+let readFilePromise = (filePath) => {
+    return fs.readFile(filePath);
+}
 
 function base_server(req,res){
     let q = url.parse(req.url);
     q = q.pathname;
-    
-   
-    
-    res.writeHead(200);
+    console.log(path_to_cache + q +".jpg");
+    full_path = path_to_cache + q +".jpg";
+    console.log(full_path);
+   switch(req.method){
+    case "GET":{
+        
+        readFilePromise(full_path).then(result => {
+            res.writeHead(200,{'Content-Type': 'image/jpeg'});
+            res.write(result);
+        })
+        .catch(err => {
+            res.writeHead(404,{'Content-Type': 'image/jpeg'});
+            res.write("404 not found")
+        })
+        .finally(() => {
+            console.log("Operation completed");
+            res.end();
+        })               
+        break;
+    }
+    case "PUT":{
+        res.writeHead(201,{'Content-Type': 'image/jpeg'});
+        promise2(full_path,g_data)
+            .then(console.log("Writing data succesfully"))
+            .catch((err)=>{console.log("Writing data unsuccesfully")})
+            .finally(() => {
+                console.log("Operation completed");
+                res.end();
+            }) ;
+            break;
+    }
+    case "DELETE":{
+         fs.unlink(full_path); 
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end("Image deleted");
+        break;
+    }
+    default:{
+        res.writeHead(405, { 'Content-Type': 'text/plain' });
+        res.end("Method not allowed");
+        break;
+    }
 
-
-    res.end(q);
+   }
 }
 
 let server = http.createServer(base_server);
