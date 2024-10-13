@@ -54,18 +54,9 @@ program.parse();
 //.then(console.log("Writing data succesfully"))
 //.catch((err)=>{console.log("Writing data unsuccesfully")});
 
-let promise2 = (path_2, g_data) => {
-    return new Promise((resolve, reject) => {
-      fs.writeFile(path_2+ q, g_data, 'binary', (err) => {
-        if (err) {
-          reject(err); // Якщо помилка, повертаємо її
-        } else {
-          resolve(); 
-        }
-      });
-    });
-  };
-
+let writeFilePromise = (path,data)=>{
+    return fs.writeFile(path,data,(err)=>{if (err){throw err}})
+}
 
 let readFilePromise = (filePath) => {
     return fs.readFile(filePath);
@@ -84,7 +75,7 @@ function base_server(req,res){
             res.write(result);
         })
         .catch(err => {
-            res.writeHead(404,{'Content-Type': 'image/jpeg'});
+            res.writeHead(404,{'Content-Type': 'text/html'});
             res.write("404 not found")
         })
         .finally(() => {
@@ -96,24 +87,32 @@ function base_server(req,res){
     case "PUT":{
         
         superagent
-            .get('https://http.cat/404')
+            .get('https://http.cat' + q)
             .buffer(true)
             .then((response)=>{
-                promise2(path_to_cache,response.body)
+                writeFilePromise(full_path,response.body)
                     .then(()=>{
-                        res.writeHead(201,{'Content-Type': 'image/jpeg'});
+                        res.writeHead(201,{'Content-Type': 'text/html'});
+                        res.write('Photo write');
+                        
                         
                     })
                     .catch((err)=>{
-                        res.writeHead(404,{'Content-Type': 'text/html'});
-                        res.write("404 file not write")
+                        res.writeHead(422,{'Content-Type': 'text/html'});
+                        res.write("422 Unprocessable Entity");
+                        
                     })
                     .finally(() => {
-                        console.log("Operation completed");
+                        console.log("complete");
                         res.end();
                     });
             }
             )
+            .catch((error)=>{
+                res.writeHead(404,{'Content-Type': 'text/html'});
+                        res.write("404 not found on another server");
+                        res.end();
+            })
         
             break;
     }
@@ -125,12 +124,13 @@ function base_server(req,res){
         }catch(err){
             res.writeHead(404,{'Content-Type': 'text/html'});
             res.write("404 not found")
+            res.end("Image not found");
         }
         break;
     }
     default:{
-        res.writeHead(405, { 'Content-Type': 'text/plain' });
-        res.end("Method not allowed");
+        res.writeHead(405, { 'Content-Type': 'text/html' });
+        res.end("405 Method not allowed");
         break;
     }
 
