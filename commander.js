@@ -2,7 +2,6 @@ const http = require('http');
 const {program} = require('commander');
 const url = require('url');
 const fs = require('fs').promises
-const path = require('path');
 const superagent = require("superagent");
 
 
@@ -55,12 +54,18 @@ program.parse();
 //.catch((err)=>{console.log("Writing data unsuccesfully")});
 
 let writeFilePromise = (path,data)=>{
-    return fs.writeFile(path,data,(err)=>{if (err){throw err}})
+    return fs.writeFile(path,data)
 }
 
 let readFilePromise = (filePath) => {
     return fs.readFile(filePath);
 }
+let deleteFile = (path)=>{
+    return fs.access(path);
+}
+
+
+
 
 function base_server(req,res){
     let q = url.parse(req.url);
@@ -117,15 +122,17 @@ function base_server(req,res){
             break;
     }
     case "DELETE":{
-        try{
-         fs.unlink(full_path); 
-                res.writeHead(200, { 'Content-Type': 'text/plain' });
-                res.end("Image deleted");
-        }catch(err){
+        deleteFile(full_path).then((full_path)=>{
+            fs.unlink(full_path); 
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end("Image deleted");
+        })
+         .catch((err)=>{
             res.writeHead(404,{'Content-Type': 'text/html'});
-            res.write("404 not found")
-            res.end("Image not found");
-        }
+            res.write("404 image not found.Not deleted")
+            res.end();
+         })
+        
         break;
     }
     default:{
