@@ -74,19 +74,35 @@ function base_server(req,res){
 
    switch(req.method){
     case "GET":{
-        
-        readFilePromise(full_path).then(result => {
-            res.writeHead(200,{'Content-Type': 'image/jpeg'});
-            res.write(result);
+        fs.access(full_path)
+        .then(()=>{
+            readFilePromise(full_path).then(result => {
+                res.writeHead(200,{'Content-Type': 'image/jpeg'});
+                res.write(result);
+                res.end()
+            })
+            .catch(err => {
+                res.writeHead(404,{'Content-Type': 'text/html'});
+                res.write("404 not found")
+                res.end()
+            })  
         })
-        .catch(err => {
-            res.writeHead(404,{'Content-Type': 'text/html'});
-            res.write("404 not found")
+        .catch((err)=>{
+            superagent.get('https://http.cat' + q)
+            .buffer(true)
+            .then((response)=>{
+                res.writeHead(200,{'Content-Type': 'image/jpeg'});
+                res.write(response.body);
+                res.end()
+                console.log("from another server")
+            })
+            .catch((err)=>{
+                res.writeHead(404,{'Content-Type': 'text/html'});
+                res.write("404 not found on another server")
+                res.end()
+            })
         })
-        .finally(() => {
-            console.log("Operation completed");
-            res.end();
-        })               
+                  
         break;
     }
     case "PUT":{
@@ -104,7 +120,7 @@ function base_server(req,res){
                     })
                     .catch((err)=>{
                         res.writeHead(422,{'Content-Type': 'text/html'});
-                        res.write("422 Unprocessable Entity");
+                        res.write("404 not found");
                         
                     })
                     .finally(() => {
@@ -122,7 +138,8 @@ function base_server(req,res){
             break;
     }
     case "DELETE":{
-        deleteFile(full_path).then((full_path)=>{
+        deleteFile(full_path)
+        .then((full_path)=>{
             fs.unlink(full_path); 
             res.writeHead(200, { 'Content-Type': 'text/plain' });
             res.end("Image deleted");
